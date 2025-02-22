@@ -1,1 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC Video Call with Live Transcription</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.11.1/simplepeer.min.js"></script>
+    <script defer src="script.js"></script>
+</head>
+<body>
+    <h1>WebRTC Video Call</h1>
 
+    <div id="videoContainer">
+        <video id="localVideo" autoplay muted></video>
+    </div>
+
+    <input type="text" id="roomInput" placeholder="Enter Room Code">
+    <button onclick="createRoom()">Create Room</button>
+    <button onclick="joinRoom()">Join Room</button>
+    <button onclick="endCall()">End Call</button>
+
+    <h2>Live Transcription:</h2>
+    <div id="transcript"></div>
+</body>
+</html>
