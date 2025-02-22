@@ -1,4 +1,4 @@
-const socket = io(http://techx-production.up.railway.app);
+const socket = io(https://techx-production.up.railway.app);
 let localStream, peerConnection, otherUserId;
 const config = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 let userName;
