@@ -1,64 +1,51 @@
 const express = require("express");
 const http = require("http");
-const { Server } = require("socket.io");
+const socketIo = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = socketIo(server);
 
-app.use(express.static("public")); // Serve static files
+app.use(express.static("public"));
 
-const rooms = {}; // Store users in rooms
+let rooms = {}; // Store room participants
 
 io.on("connection", (socket) => {
-    console.log("New user connected:", socket.id);
+    console.log("New client connected:", socket.id);
 
-    // Create a new room
-    socket.on("create-room", () => {
-        let roomCode = Math.random().toString(36).substring(2, 8); // Generate a random room code
-        rooms[roomCode] = [socket.id]; 
+    socket.on("joinRoom", (roomCode, userName) => {
         socket.join(roomCode);
-        socket.emit("room-created", roomCode);
-    });
+        if (!rooms[roomCode]) rooms[roomCode] = [];
+        rooms[roomCode].push({ id: socket.id, userName });
 
-    // Join an existing room
-    socket.on("join-room", (roomCode) => {
-        if (rooms[roomCode]) {
-            rooms[roomCode].push(socket.id);
-            socket.join(roomCode);
-            io.to(roomCode).emit("room-joined", roomCode);
-        } else {
-            socket.emit("room-error", "Room not found");
+        // Notify existing users in the room
+        if (rooms[roomCode].length > 1) {
+            const otherUser = rooms[roomCode].find(user => user.id !== socket.id);
+            socket.emit("userJoined", otherUser.id);
         }
     });
 
-    // Handle WebRTC signaling
-    socket.on("offer", ({ roomCode, signal }) => {
-        socket.to(roomCode).emit("offer", { signal, from: socket.id });
+    socket.on("offer", (offer, toUser) => {
+        io.to(toUser).emit("offer", offer, socket.id);
     });
 
-    socket.on("answer", ({ roomCode, signal }) => {
-        socket.to(roomCode).emit("answer", { signal });
+    socket.on("answer", (answer, toUser) => {
+        io.to(toUser).emit("answer", answer);
     });
 
-    socket.on("transcription", ({ roomCode, transcript }) => {
-        socket.to(roomCode).emit("transcription", { transcript });
+    socket.on("iceCandidate", (candidate, toUser) => {
+        io.to(toUser).emit("iceCandidate", candidate);
     });
 
-    // Handle user disconnect
+    socket.on("transcription", (data) => {
+        io.to(data.room).emit("displayText", { name: data.name, text: data.text });
+    });
+
     socket.on("disconnect", () => {
-        for (const room in rooms) {
-            rooms[room] = rooms[room].filter(id => id !== socket.id);
-            if (rooms[room].length === 0) {
-                delete rooms[room];
-            }
+        for (const roomCode in rooms) {
+            rooms[roomCode] = rooms[roomCode].filter(user => user.id !== socket.id);
+            if (rooms[roomCode].length === 0) delete rooms[roomCode];
         }
-    });
-
-    // Handle end call
-    socket.on("leave-room", (roomCode) => {
-        socket.leave(roomCode);
-        io.to(roomCode).emit("user-left");
     });
 });
 
